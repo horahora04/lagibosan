@@ -1,10 +1,5 @@
 fastapi
-uvicorn
-jinja2
-python-dotenv
+uvicorn[standard]
+typer
 pymongo
-python-multipart
-mitmproxy
-colorama
-aiofiles
-httpx
+python-dotenv
