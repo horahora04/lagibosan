@@ -12,16 +12,16 @@ async function httpJson(url) {
 
 // ========= BACKEND API =========
 async function getScrapeStatus() {
-  const data = await httpJson("http://127.0.0.1:8000/get-scrape-status");
+  const data = await httpJson("http://127.0.0.1:8000/scrape/status");
   return data.status;
 }
 async function fetchPageUrls() {
-  const text = await httpText("http://127.0.0.1:8000/read/pageURL.txt");
+  const text = await httpText("http://127.0.0.1:8000/scrape/page-urls");
   return text.split("\n").map(s => s.trim()).filter(Boolean);
 }
 async function fetchUrlsTxt() {
   try {
-    const txt = await httpText("http://127.0.0.1:8000/read/Urls.txt");
+    const txt = await httpText("http://127.0.0.1:8000/scrape/urls");
     return txt.split("\n").map(u => u.trim()).filter(u => u.startsWith("https://shopee.co.id"));
   } catch (e) {
     console.error("❌ Gagal baca Urls.txt:", e);
@@ -30,7 +30,7 @@ async function fetchUrlsTxt() {
 }
 async function clearUrlsTxt() {
   try {
-    await fetch("http://127.0.0.1:8000/clear-urls", { method: "POST" });
+    await fetch("http://127.0.0.1:8000/scrape/urls/clear", { method: "POST" });
     console.log("🧹 Urls.txt dibersihkan via backend.");
   } catch (e) {
     console.error("❌ Gagal clear Urls.txt:", e);
@@ -40,7 +40,7 @@ async function clearUrlsTxt() {
 // ========= LOG KE BACKEND =========
 async function writeLogLine(categoryUrl, productUrl) {
   try {
-    await fetch("http://127.0.0.1:8000/write/log-line", {
+    await fetch("http://127.0.0.1:8000/scrape/log", {
       method: "POST",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({ line: `${categoryUrl} | ${productUrl}` })

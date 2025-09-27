@@ -26,7 +26,7 @@ function resetState() {
 // Sinkronkan backend agar status jadi STOPPED setelah reload extension
 async function forceStopScraper() {
   try {
-    await fetch("http://127.0.0.1:8000/stop-scrape", { method: "POST" });
+    await fetch("http://127.0.0.1:8000/scrape/stop", { method: "POST" });
     console.log("⏸ Backend status direset ke STOPPED setelah reload extension.");
   } catch (e) {
     console.warn("⚠️ Gagal reset backend status:", e);

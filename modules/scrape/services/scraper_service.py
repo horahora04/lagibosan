@@ -82,7 +82,7 @@ def insert_record_sync(doc: Dict, collection: str = "scrape_records") -> str:
     Kalau tidak pakai DB, return "" saja.
     """
     try:
-        from modules.scrape.services.db_service import get_db
+        from modules.scrape.services.db_scrape import get_db
         db = get_db()
         doc["created_at"] = doc.get("created_at", datetime.now())
         doc["updated_at"] = datetime.now()
