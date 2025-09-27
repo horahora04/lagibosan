@@ -2,20 +2,11 @@ from mitmproxy import http
 from pathlib import Path
 from datetime import datetime
 import json
-from pymongo import MongoClient
+from modules.scrape.services.db_scrape import save_product  # pakai service
+from core.config import SCRAPE_DIR, LOGS_DIR
 
-# ====== Konfigurasi Path ======
-BASE_DIR = Path(__file__).resolve().parent.parent
-DOWNLOADS_PATH = BASE_DIR / "Downloads"
-URLS_FILE = DOWNLOADS_PATH / "Urls.txt"
-DEBUG_LOG = DOWNLOADS_PATH / "mitm_debug.log"
-
-DOWNLOADS_PATH.mkdir(exist_ok=True)
-
-# ====== Setup MongoDB ======
-client = MongoClient("mongodb://localhost:27017/")
-db = client["shopee_db"]
-products = db["products"]
+DEBUG_LOG = LOGS_DIR / "mitm_debug.log"
+URLS_FILE = SCRAPE_DIR / "Urls.txt"
 
 # ====== Helper ======
 def debug_log(message: str):
@@ -31,12 +22,6 @@ def write_urls(urls: list[str]):
     except Exception as e:
         debug_log(f"❌ Gagal menulis Urls.txt: {e}")
 
-def save_product_to_mongo(data: dict):
-    try:
-        products.replace_one({"_id": data["_id"]}, data, upsert=True)
-        debug_log(f"💾 Produk disimpan: {data['_id']}")
-    except Exception as e:
-        debug_log(f"❌ Gagal simpan MongoDB: {e}")
 
 # ====== Mitmproxy Response Handler ======
 def response(flow: http.HTTPFlow):
@@ -82,6 +67,7 @@ def response(flow: http.HTTPFlow):
                         slug = name.replace(" ", "-")
                         product_url = f"https://shopee.co.id/{slug}-i.{shopid}.{itemid}"
                         urls.append(product_url)
+                        # Simpan ringkas ke DB
                         product_data = {
                             "_id": product_url,
                             "title": name,
@@ -89,6 +75,7 @@ def response(flow: http.HTTPFlow):
                             "images": card.get("images", []),
                             "created_at": datetime.now()
                         }
+                        save_product(product_data)
                 if urls:
                     write_urls(urls)
                 else:
@@ -118,7 +105,7 @@ def response(flow: http.HTTPFlow):
                             "categories": [c.get("display_name") for c in item.get("categories", [])],
                             "created_at": datetime.now()
                         }
-                        save_product_to_mongo(product_data)
+                        save_product(product_data)
             except json.JSONDecodeError as e:
                 debug_log(f"❌ JSONDecodeError get_pc: {e}")
 
