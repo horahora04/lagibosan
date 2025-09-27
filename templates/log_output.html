@@ -1,0 +1,10 @@
+{% extends "base.html" %}
+{% block content %}
+<h3>📄 Hasil Log:</h3>
+<pre style="background:#eee;padding:10px;">
+{% for log in logs %}
+{{ log }}
+{% endfor %}
+</pre>
+<a href="/">⬅️ Kembali ke dashboard</a>
+{% endblock %}

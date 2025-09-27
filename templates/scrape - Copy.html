@@ -1,0 +1,202 @@
+{% extends "base.html" %}
+
+{% block content %}
+<style>
+  .card-dark {
+    background-color: #161b22;
+    color: #f0f0f0;
+    border: none;
+    border-radius: 0.75rem;
+  }
+  .card-header-custom {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    font-size: 1.1rem;
+    font-weight: 600;
+    padding: 0.75rem 1rem;
+  }
+  .btn-group { display: flex; flex-wrap: wrap; gap: 0.5rem; }
+  .btn-scrape-action {
+    font-size: 0.9rem;
+    padding: 0.5rem 1rem;
+    border-radius: 0.5rem;
+    font-weight: 500;
+    transition: all 0.2s ease;
+    border: 1px solid #444;
+  }
+  .btn-scrape-action:hover {
+    transform: scale(1.02);
+    opacity: 0.9;
+  }
+  #log-output {
+    height: 500px;
+    overflow-y: auto;
+    background: #0d1117;
+    color: #f0f0f0;
+    padding: 1rem;
+    border-radius: 0.5rem;
+    font-family: 'Fira Code', monospace;
+    font-size: 0.85rem;
+    white-space: pre-wrap;
+    border: 1px solid #333;
+    line-height: 1.4;
+  }
+  .log-line { display: block; margin-bottom: 2px; }
+  .log-kategori { color: #2ecc71; }
+  .log-produk { color: #3498db; }
+  .log-info { color: #f39c12; }
+  .status-badge {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.4rem;
+    padding: 0.3rem 0.75rem;
+    border-radius: 999px;
+    font-weight: 600;
+    font-size: 0.8rem;
+  }
+  .status-badge.running {
+    background: #065f46;
+    color: #d1fae5;
+  }
+  .status-badge.stopped {
+    background: #374151;
+    color: #e5e7eb;
+  }
+</style>
+
+<div class="container-fluid mt-4">
+  <div class="row g-3">
+    <!-- Sidebar kiri -->
+    <div class="col-md-3">
+      <div class="card card-dark">
+        <div class="card-header-custom">
+          <span>⚙️ Kontrol Scraper</span>
+          <span id="status-badge" class="status-badge stopped">⏸ STOPPED</span>
+        </div>
+        <div class="card-body">
+          <div class="btn-group">
+            <button id="start-btn" class="btn btn-success btn-scrape-action">🚀 Mulai</button>
+            <button id="stop-btn" class="btn btn-danger btn-scrape-action">⛔ Stop</button>
+            <button id="clear-log-btn" class="btn btn-secondary btn-scrape-action">🧹 Bersihkan</button>
+            <button id="refresh-log-btn" class="btn btn-outline-light btn-scrape-action">🔄 Refresh</button>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Panel kanan: live log -->
+    <div class="col-md-9">
+      <div class="card card-dark">
+        <div class="card-header-custom">
+          <span>📜 Live Log Scraper</span>
+        </div>
+        <div class="card-body">
+          <div id="log-output">⌛ Menunggu perintah...</div>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<script>
+  const startBtn      = document.getElementById('start-btn');
+  const stopBtn       = document.getElementById('stop-btn');
+  const clearLogBtn   = document.getElementById('clear-log-btn');
+  const refreshBtn    = document.getElementById('refresh-log-btn');
+  const logOutput     = document.getElementById('log-output');
+  const statusBadge   = document.getElementById('status-badge');
+
+  function appendManualLog(message, cssClass='log-info') {
+    const ts = new Date().toLocaleTimeString();
+    logOutput.innerHTML += `<span class="log-line ${cssClass}">[${ts}] ${message}</span>\n`;
+    logOutput.scrollTop = logOutput.scrollHeight;
+  }
+
+  async function updateStatusBadge() {
+    try {
+      const res = await fetch('/get-scrape-status', { cache: 'no-store' });
+      if (!res.ok) throw new Error(`HTTP ${res.status}`);
+      const data = await res.json();
+      if (data.status === 'running') {
+        statusBadge.textContent = '🟢 RUNNING';
+        statusBadge.classList.remove('stopped');
+        statusBadge.classList.add('running');
+      } else {
+        statusBadge.textContent = '⏸ STOPPED';
+        statusBadge.classList.remove('running');
+        statusBadge.classList.add('stopped');
+      }
+    } catch (e) {
+      statusBadge.textContent = '⚠️ OFFLINE';
+      statusBadge.classList.remove('running');
+      statusBadge.classList.add('stopped');
+    }
+  }
+
+  async function refreshLog() {
+    try {
+      const res = await fetch('/read/ScraperLog.txt', { cache: 'no-store' });
+      if (!res.ok) {
+        logOutput.innerHTML = `<span class='log-info'>⚠️ Gagal baca log (HTTP ${res.status})</span>`;
+        return;
+      }
+      const text = await res.text();
+      if (!text.trim()) {
+        logOutput.innerHTML = "<span class='log-info'>⌛ Belum ada log...</span>";
+        return;
+      }
+      const lines = text.trim().split("\n");
+      logOutput.innerHTML = lines.map(line => {
+        if (line.includes("|")) {
+          const [kategori, produk] = line.split("|");
+          return `<span class="log-line"><span class="log-kategori">${kategori.trim()}</span> | <span class="log-produk">${produk.trim()}</span></span>`;
+        }
+        return `<span class="log-line">${line}</span>`;
+      }).join("\n");
+      logOutput.scrollTop = logOutput.scrollHeight;
+    } catch (err) {
+      console.error("Gagal baca ScraperLog:", err);
+      logOutput.innerHTML = "<span class='log-info'>⚠️ Tidak bisa terhubung ke server.</span>";
+    }
+  }
+
+  startBtn.onclick = async () => {
+    try {
+      await fetch('/start-scrape', { method: 'POST' });
+      appendManualLog("🚀 Scrape dimulai...");
+      updateStatusBadge();
+    } catch (err) {
+      appendManualLog("❌ Gagal mulai scrape: " + err);
+    }
+  };
+
+  stopBtn.onclick = async () => {
+    try {
+      await fetch('/stop-scrape', { method: 'POST' });
+      appendManualLog("⛔ Scrape dihentikan.");
+      updateStatusBadge();
+    } catch (err) {
+      appendManualLog("❌ Gagal hentikan scrape: " + err);
+    }
+  };
+
+  clearLogBtn.onclick = async () => {
+    try {
+      await fetch('/clear-scraper-log', { method: 'POST' });
+      logOutput.innerHTML = "<span class='log-info'>🧹 Log dibersihkan.</span>";
+    } catch (err) {
+      appendManualLog("❌ Gagal bersihkan log: " + err);
+    }
+  };
+
+  refreshBtn.onclick = () => refreshLog();
+
+  // Polling status dan log
+  setInterval(updateStatusBadge, 3000);
+  setInterval(refreshLog, 3000);
+  updateStatusBadge();
+  refreshLog();
+  appendManualLog("⌛ Menunggu perintah...");
+</script>
+{% endblock %}

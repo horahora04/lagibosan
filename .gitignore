@@ -1,0 +1,28 @@
+# Virtual environment
+venv/
+.env
+*.env
+
+# Python cache
+__pycache__/
+*.py[cod]
+*$py.class
+
+# Logs & temporary
+*.log
+Downloads/
+
+# IDE/editor settings
+.vscode/
+.idea/
+*.swp
+
+# OS generated
+.DS_Store
+Thumbs.db
+
+# Test / coverage
+htmlcov/
+.tox/
+.coverage
+.pytest_cache/

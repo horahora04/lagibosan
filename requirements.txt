@@ -1,0 +1,10 @@
+fastapi
+uvicorn
+jinja2
+python-dotenv
+pymongo
+python-multipart
+mitmproxy
+colorama
+aiofiles
+httpx
